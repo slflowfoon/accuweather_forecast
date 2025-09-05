@@ -1,0 +1,11 @@
+{
+  "domain": "my_accuweather",
+  "name": "My AccuWeather Phrases",
+  "config_flow": true,
+  "documentation": "https://www.home-assistant.io/docs/development/custom_integration_template",
+  "issue_tracker": "https://github.com/home-assistant/core/issues",
+  "codeowners": [],
+  "dependencies": [],
+  "version": "1.0.0",
+  "requirements": ["httpx"]
+}
