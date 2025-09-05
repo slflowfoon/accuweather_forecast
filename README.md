@@ -8,8 +8,8 @@
 <img src=https://img.shields.io/badge/HACS-Default-orange.svg>
 <img src="https://img.shields.io/maintenance/yes/2025.svg">
 <img src=https://img.shields.io/badge/version-1.0.0-blue>
-<img alt="Issues" src="https://img.shields.io/github/issues/slflowfoon/ha-scrutiny?color=0088ff">
+<img alt="Issues" src="https://img.shields.io/github/issues/slflowfoon/accuweather_longphrase?color=0088ff">
     <p align=center style="font-weight:bold">
-      Imports stats from Scrutiny to Home Assistant
+      Imports "LongPhrase" stats from Accuweather to Home Assistant
     </p>
 </p>
