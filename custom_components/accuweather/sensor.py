@@ -1,9 +1,13 @@
 """Sensor platform for My AccuWeather Phrases."""
-from homeassistant.components.sensor import SensorDeviceClass, SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.components.sensor import (
+    SensorEntity,
+    SensorDeviceClass,
+    SensorStateClass,
+)
 
 from .const import DOMAIN
 from .coordinator import MyAccuweatherCoordinator
@@ -21,13 +25,10 @@ async def async_setup_entry(
     
     # Loop through each of the 5 days
     for day_index in range(5):
-        # For each day, add a sensor for the "Day" phrase AND the "Night" phrase
+        # For each day, add the Day phrase, Night phrase, and RealFeel Temp sensor
         sensors.append(LongPhraseSensor(coordinator, day_index, "Day"))
         sensors.append(LongPhraseSensor(coordinator, day_index, "Night"))
-        
-        # --- ADD THE NEW SENSOR ---
-        # For each day, also add a sensor for the RealFeel Max Temperature
-        sensors.append(RealFeelMaxSensor(coordinator, day_index))
+        sensors.append(RealFeelTempMaxSensor(coordinator, day_index))
         
     async_add_entities(sensors)
 
@@ -46,6 +47,7 @@ class LongPhraseSensor(CoordinatorEntity, SensorEntity):
         self._attr_name = f"Forecast Day {self.day_index} {self.phrase_type} Long Phrase"
         self._attr_unique_id = f"{self._location_key}_long_phrase_{self.phrase_type.lower()}_day_{self.day_index}"
         
+        # Set a different icon for day and night
         if self.phrase_type == "Day":
             self._attr_icon = "mdi:weather-sunny"
         else:
@@ -58,13 +60,14 @@ class LongPhraseSensor(CoordinatorEntity, SensorEntity):
             return self.coordinator.data[self.day_index][self.phrase_type]["LongPhrase"]
         return None
 
-# --- NEW SENSOR CLASS ---
-class RealFeelMaxSensor(CoordinatorEntity, SensorEntity):
-    """A sensor for one day's RealFeel Maximum Temperature."""
 
-    # Set device class and state class for proper handling in Home Assistant
+class RealFeelTempMaxSensor(CoordinatorEntity, SensorEntity):
+    """A sensor for one day's RealFeel maximum temperature."""
+
     _attr_device_class = SensorDeviceClass.TEMPERATURE
-    
+    _attr_state_class = SensorStateClass.MEASUREMENT
+    _attr_icon = "mdi:thermometer"
+
     def __init__(self, coordinator: MyAccuweatherCoordinator, day_index: int):
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -72,22 +75,19 @@ class RealFeelMaxSensor(CoordinatorEntity, SensorEntity):
         self._location_key = coordinator.location_key
 
         # Set entity attributes
-        self._attr_name = f"Forecast Day {self.day_index} RealFeel Max Temp"
-        self._attr_unique_id = f"{self._location_key}_realfeel_max_day_{self.day_index}"
-        self._attr_icon = "mdi:thermometer"
+        self._attr_name = f"Forecast Day {self.day_index} RealFeel Temp Max"
+        self._attr_unique_id = f"{self._location_key}_realfeel_temp_max_day_{self.day_index}"
 
     @property
     def native_value(self):
         """Return the state of the sensor."""
         if self.coordinator.data and len(self.coordinator.data) > self.day_index:
-            # Navigate through the nested dictionary to get the value
             return self.coordinator.data[self.day_index]["RealFeelTemperature"]["Maximum"]["Value"]
         return None
-
+    
     @property
     def native_unit_of_measurement(self):
         """Return the unit of measurement."""
         if self.coordinator.data and len(self.coordinator.data) > self.day_index:
-            unit = self.coordinator.data[self.day_index]["RealFeelTemperature"]["Maximum"]["Unit"]
-            return f"°{unit}" # Returns °C or °F
+            return self.coordinator.data[self.day_index]["RealFeelTemperature"]["Maximum"]["Unit"]
         return None
