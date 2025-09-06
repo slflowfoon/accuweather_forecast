@@ -81,7 +81,7 @@ class AccuWeatherLongPhraseSensor(AccuWeatherForecastBaseSensor):
         """Initialize the sensor."""
         super().__init__(coordinator, location_key, day_index)
         self._attr_name = f"AccuWeather Day Long Phrase {self._day_name}"
-        self._attr_unique_id = f"{location_key}_day_long_phrase_day_{self._day_index}"
+        self._attr_unique_id = f"{location_key}_day_long_phrase_{self._day_index}"
 
     @property
     def native_value(self) -> str | None:
@@ -102,7 +102,7 @@ class AccuWeatherNightLongPhraseSensor(AccuWeatherForecastBaseSensor):
         """Initialize the sensor."""
         super().__init__(coordinator, location_key, day_index)
         self._attr_name = f"AccuWeather Night Long Phrase {self._day_name}"
-        self._attr_unique_id = f"{location_key}_night_long_phrase_day_{self._day_index}"
+        self._attr_unique_id = f"{location_key}_night_long_phrase_{self._day_index}"
 
     @property
     def native_value(self) -> str | None:
@@ -126,7 +126,7 @@ class AccuWeatherRealFeelMaxSensor(AccuWeatherForecastBaseSensor):
         """Initialize the sensor."""
         super().__init__(coordinator, location_key, day_index)
         self._attr_name = f"AccuWeather RealFeel Max {self._day_name}"
-        self._attr_unique_id = f"{location_key}_realfeel_max_day_{self._day_index}"
+        self._attr_unique_id = f"{location_key}_realfeel_max_{self._day_index}"
 
     @property
     def native_value(self) -> float | None:
