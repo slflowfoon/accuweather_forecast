@@ -10,6 +10,6 @@
 <img src=https://img.shields.io/badge/version-1.0.0-blue>
 <img alt="Issues" src="https://img.shields.io/github/issues/slflowfoon/accuweather_longphrase?color=0088ff">
     <p align=center style="font-weight:bold">
-      Imports "LongPhrase" stats from Accuweather to Home Assistant
+      Imports "LongPhrase" and "Maximum Real Feel Temperature" stats from Accuweather to Home Assistant
     </p>
 </p>
