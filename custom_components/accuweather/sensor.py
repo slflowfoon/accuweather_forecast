@@ -8,7 +8,6 @@ from homeassistant.components.sensor import (
     SensorDeviceClass,
     SensorStateClass,
 )
-from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT
 
 from .const import DOMAIN
 from .coordinator import MyAccuweatherCoordinator
@@ -51,8 +50,11 @@ class LongPhraseSensor(CoordinatorEntity, SensorEntity):
     @property
     def native_value(self):
         """Return the state of the sensor."""
+        # --- DEFENSIVE DATA ACCESS ---
         if self.coordinator.data and len(self.coordinator.data) > self.day_index:
-            return self.coordinator.data[self.day_index][self.phrase_type]["LongPhrase"]
+            day_data = self.coordinator.data[self.day_index]
+            # Use .get() to safely access nested keys
+            return day_data.get(self.phrase_type, {}).get("LongPhrase")
         return None
 
 
@@ -72,15 +74,15 @@ class RealFeelTempMaxSensor(CoordinatorEntity, SensorEntity):
         self._attr_name = f"Forecast Day {self.day_index} RealFeel Temp Max"
         self._attr_unique_id = f"{self._location_key}_realfeel_temp_max_day_{self.day_index}"
         
-        # --- THIS IS THE FIX ---
         # Set the unit of measurement once, statically.
         self._attr_native_unit_of_measurement = coordinator.temp_unit
 
     @property
     def native_value(self):
         """Return the state of the sensor."""
+        # --- DEFENSIVE DATA ACCESS ---
         if self.coordinator.data and len(self.coordinator.data) > self.day_index:
-            return self.coordinator.data[self.day_index]["RealFeelTemperature"]["Maximum"]["Value"]
+            day_data = self.coordinator.data[self.day_index]
+            # Use .get() to safely access nested keys. This will not error if a key is missing.
+            return day_data.get("RealFeelTemperature", {}).get("Maximum", {}).get("Value")
         return None
-    
-    # The dynamic native_unit_of_measurement property has been completely removed.
