@@ -1,47 +1,51 @@
-"""DataUpdateCoordinator for the My AccuWeather Phrases integration."""
-from datetime import timedelta
+"""DataUpdateCoordinator for the AccuWeather Daily Forecast integration."""
 import logging
+from async_timeout import timeout
 
-import httpx
-
+from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
-from homeassistant.const import TEMP_CELSIUS, TEMP_FAHRENHEIT
 
-from .const import DOMAIN
+from .const import DOMAIN, API_ENDPOINT, UPDATE_INTERVAL
 
 _LOGGER = logging.getLogger(__name__)
 
-class MyAccuweatherCoordinator(DataUpdateCoordinator):
-    """My AccuWeather data update coordinator."""
 
-    def __init__(self, hass, api_key: str, location_key: str, is_metric: bool):
-        """Initialize the coordinator."""
+class AccuWeatherForecastCoordinator(DataUpdateCoordinator):
+    """Class to manage fetching AccuWeather data."""
+
+    def __init__(self, hass, api_key: str, location_key: str):
+        """Initialize the data coordinator."""
+        self.api_key = api_key
+        self.location_key = location_key
+        self.session = async_get_clientsession(hass)
+        
         super().__init__(
             hass,
             _LOGGER,
             name=DOMAIN,
-            update_interval=timedelta(hours=1),
+            update_interval=UPDATE_INTERVAL,
         )
-        self.api_key = api_key
-        self.location_key = location_key
-        self.is_metric = is_metric
-        self.temp_unit = TEMP_CELSIUS if is_metric else TEMP_FAHRENHEIT
-
-        # Dynamically build the URL based on the unit system
-        self.api_url = (
-            "http://dataservice.accuweather.com/forecasts/v1/daily/5day/"
-            f"{self.location_key}?apikey={self.api_key}&details=true&metric={str(self.is_metric).lower()}"
-        )
-        self.async_client = httpx.AsyncClient()
 
     async def _async_update_data(self):
-        """Fetch data from the AccuWeather API."""
+        """Fetch data from AccuWeather API."""
+        url = API_ENDPOINT.format(location_key=self.location_key)
+        params = {
+            "apikey": self.api_key,
+            "details": "true",
+            "metric": "true",
+        }
+        
         try:
-            response = await self.async_client.get(self.api_url)
-            response.raise_for_status()
-            data = response.json()
-            return data["DailyForecasts"]
-        except httpx.HTTPStatusError as err:
-            raise UpdateFailed(f"Error communicating with API: {err}") from err
+            async with timeout(15):
+                response = await self.session.get(url, params=params)
+                if response.status != 200:
+                    raise UpdateFailed(f"Error communicating with API: {response.status}")
+                
+                data = await response.json()
+                if not data or "DailyForecasts" not in data or not data["DailyForecasts"]:
+                    raise UpdateFailed("Invalid data received from AccuWeather API")
+                
+                return data
+
         except Exception as err:
-            raise UpdateFailed(f"Unexpected error: {err}") from err
+            raise UpdateFailed(f"Error communicating with API: {err}")
