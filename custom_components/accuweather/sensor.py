@@ -1,12 +1,18 @@
-"""Sensor platform for My AccuWeather Phrases."""
+"""Platform for AccuWeather Daily Forecast sensor entities."""
+from homeassistant.components.sensor import (
+    SensorDeviceClass,
+    SensorEntity,
+    SensorStateClass,
+)
 from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import UnitOfTemperature
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
-from homeassistant.components.sensor import SensorEntity
 
-from .const import DOMAIN
-from .coordinator import MyAccuweatherCoordinator
+from .const import DOMAIN, ATTRIBUTION, CONF_LOCATION_KEY
+from .coordinator import AccuWeatherForecastCoordinator
+
 
 async def async_setup_entry(
     hass: HomeAssistant,
@@ -14,45 +20,84 @@ async def async_setup_entry(
     async_add_entities: AddEntitiesCallback,
 ) -> None:
     """Set up the sensor platform."""
-    coordinator = hass.data[DOMAIN][entry.entry_id]
+    coordinator: AccuWeatherForecastCoordinator = hass.data[DOMAIN][entry.entry_id]
+    location_key = entry.data[CONF_LOCATION_KEY]
 
-    # Create a list to hold all our new sensors
-    sensors = []
-    
-    # Loop through each of the 5 days
-    for day_index in range(5):
-        # For each day, add a sensor for the "Day" phrase AND the "Night" phrase
-        sensors.append(LongPhraseSensor(coordinator, day_index, "Day"))
-        sensors.append(LongPhraseSensor(coordinator, day_index, "Night"))
-        
-    async_add_entities(sensors)
+    entities = [
+        AccuWeatherLongPhraseSensor(coordinator, location_key),
+        AccuWeatherRealFeelMaxSensor(coordinator, location_key),
+    ]
+    async_add_entities(entities)
 
 
-class LongPhraseSensor(CoordinatorEntity, SensorEntity):
-    """A sensor for one day's LongPhrase (for Day or Night)."""
+class AccuWeatherForecastBaseSensor(CoordinatorEntity, SensorEntity):
+    """Base class for AccuWeather Forecast sensors."""
 
-    def __init__(self, coordinator: MyAccuweatherCoordinator, day_index: int, phrase_type: str):
+    def __init__(self, coordinator: AccuWeatherForecastCoordinator, location_key: str):
         """Initialize the sensor."""
         super().__init__(coordinator)
-        self.day_index = day_index
-        self.phrase_type = phrase_type  # "Day" or "Night"
-        self._location_key = coordinator.location_key
-
-        # Set entity attributes dynamically based on phrase_type
-        self._attr_name = f"Forecast Day {self.day_index} {self.phrase_type} Long Phrase"
-        self._attr_unique_id = f"{self._location_key}_long_phrase_{self.phrase_type.lower()}_day_{self.day_index}"
-        
-        # Set a different icon for day and night
-        if self.phrase_type == "Day":
-            self._attr_icon = "mdi:weather-sunny"
-        else:
-            self._attr_icon = "mdi:weather-night"
+        self._location_key = location_key
+        self._attr_attribution = ATTRIBUTION
 
     @property
-    def native_value(self):
+    def device_info(self):
+        """Return device information."""
+        return {
+            "identifiers": {(DOMAIN, self._location_key)},
+            "name": f"AccuWeather Forecast ({self._location_key})",
+            "manufacturer": "AccuWeather",
+            "entry_type": "service",
+        }
+    
+    @property
+    def today_forecast(self):
+        """Return today's forecast data from the coordinator."""
+        # The first item in the list is today's forecast
+        if self.coordinator.data and self.coordinator.data.get("DailyForecasts"):
+            return self.coordinator.data["DailyForecasts"][0]
+        return None
+
+class AccuWeatherLongPhraseSensor(AccuWeatherForecastBaseSensor):
+    """Representation of the Long Phrase sensor."""
+
+    _attr_icon = "mdi:text-long"
+    
+    def __init__(self, coordinator: AccuWeatherForecastCoordinator, location_key: str):
+        """Initialize the sensor."""
+        super().__init__(coordinator, location_key)
+        self._attr_name = f"AccuWeather Day Long Phrase"
+        self._attr_unique_id = f"{location_key}_day_long_phrase"
+
+    @property
+    def native_value(self) -> str | None:
         """Return the state of the sensor."""
-        # Make sure data exists and is a list with enough items
-        if self.coordinator.data and len(self.coordinator.data) > self.day_index:
-            # Use self.phrase_type to get the correct data ("Day" or "Night")
-            return self.coordinator.data[self.day_index][self.phrase_type]["LongPhrase"]
-        return None  # Return None if data is not available
+        if self.today_forecast:
+            try:
+                return self.today_forecast["Day"]["LongPhrase"]
+            except (KeyError, IndexError):
+                return None
+        return None
+
+
+class AccuWeatherRealFeelMaxSensor(AccuWeatherForecastBaseSensor):
+    """Representation of the Maximum RealFeel Temperature sensor."""
+
+    _attr_device_class = SensorDeviceClass.TEMPERATURE
+    _attr_native_unit_of_measurement = UnitOfTemperature.CELSIUS
+    _attr_state_class = SensorStateClass.MEASUREMENT
+
+    def __init__(self, coordinator: AccuWeatherForecastCoordinator, location_key: str):
+        """Initialize the sensor."""
+        super().__init__(coordinator, location_key)
+        self._attr_name = f"AccuWeather RealFeel Max"
+        self._attr_unique_id = f"{location_key}_realfeel_max"
+
+    @property
+    def native_value(self) -> float | None:
+        """Return the state of the sensor."""
+        if self.today_forecast:
+            try:
+                return self.today_forecast["RealFeelTemperature"]["Maximum"]["Value"]
+            except (KeyError, IndexError):
+                return None
+        return None
