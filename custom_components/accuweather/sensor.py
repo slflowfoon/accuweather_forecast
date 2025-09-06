@@ -27,6 +27,7 @@ async def async_setup_entry(
     # The API provides 5 days of forecasts, create sensors for each day.
     for day_index in range(5):
         entities.append(AccuWeatherLongPhraseSensor(coordinator, location_key, day_index))
+        entities.append(AccuWeatherNightLongPhraseSensor(coordinator, location_key, day_index))
         entities.append(AccuWeatherRealFeelMaxSensor(coordinator, location_key, day_index))
     
     async_add_entities(entities)
@@ -72,15 +73,15 @@ class AccuWeatherForecastBaseSensor(CoordinatorEntity, SensorEntity):
 
 
 class AccuWeatherLongPhraseSensor(AccuWeatherForecastBaseSensor):
-    """Representation of the Long Phrase sensor for a specific day."""
+    """Representation of the Day Long Phrase sensor for a specific day."""
 
     _attr_icon = "mdi:text-long"
     
     def __init__(self, coordinator: AccuWeatherForecastCoordinator, location_key: str, day_index: int):
         """Initialize the sensor."""
         super().__init__(coordinator, location_key, day_index)
-        self._attr_name = f"AccuWeather Long Phrase {self._day_name}"
-        self._attr_unique_id = f"{location_key}_long_phrase_day_{self._day_index}"
+        self._attr_name = f"AccuWeather Day Long Phrase {self._day_name}"
+        self._attr_unique_id = f"{location_key}_day_long_phrase_day_{self._day_index}"
 
     @property
     def native_value(self) -> str | None:
@@ -88,6 +89,27 @@ class AccuWeatherLongPhraseSensor(AccuWeatherForecastBaseSensor):
         if self.day_forecast:
             try:
                 return self.day_forecast["Day"]["LongPhrase"]
+            except (KeyError, IndexError):
+                return None
+        return None
+
+class AccuWeatherNightLongPhraseSensor(AccuWeatherForecastBaseSensor):
+    """Representation of the Night Long Phrase sensor for a specific day."""
+
+    _attr_icon = "mdi:weather-night"
+    
+    def __init__(self, coordinator: AccuWeatherForecastCoordinator, location_key: str, day_index: int):
+        """Initialize the sensor."""
+        super().__init__(coordinator, location_key, day_index)
+        self._attr_name = f"AccuWeather Night Long Phrase {self._day_name}"
+        self._attr_unique_id = f"{location_key}_night_long_phrase_day_{self._day_index}"
+
+    @property
+    def native_value(self) -> str | None:
+        """Return the state of the sensor."""
+        if self.day_forecast:
+            try:
+                return self.day_forecast["Night"]["LongPhrase"]
             except (KeyError, IndexError):
                 return None
         return None
